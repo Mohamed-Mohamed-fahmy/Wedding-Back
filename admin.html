@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RSVP Admin - Amino & Yasmeen</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f8f3ef; color: #333; padding: 2rem; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #b5608a; }
+    .subtitle { color: #888; margin-bottom: 2rem; }
+    .stats { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .stat-card { background: #fff; border: 2px dashed #e8a8d1; border-radius: 12px; padding: 1.25rem; min-width: 140px; text-align: center; }
+    .stat-card .number { font-size: 2rem; font-weight: 700; color: #b5608a; }
+    .stat-card .label { font-size: 0.85rem; color: #888; margin-top: 0.25rem; }
+    .filters { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filters button { padding: 0.5rem 1rem; border: 2px dashed #e8a8d1; border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.85rem; color: #555; transition: all 0.2s; }
+    .filters button.active, .filters button:hover { background: #f5d9e8; color: #b5608a; border-color: #b5608a; }
+    .filters input { padding: 0.5rem 1rem; border: 2px dashed #e8a8d1; border-radius: 8px; font-size: 0.85rem; outline: none; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    th { background: #f5d9e8; color: #b5608a; text-align: left; padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 0.75rem 1rem; border-top: 1px solid #f0e8e4; font-size: 0.9rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    tr:hover td { background: #fdf8f5; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge.accept { background: #d9f0e8; color: #2d7a5f; }
+    .badge.decline { background: #fde8e8; color: #a04040; }
+    .empty { text-align: center; padding: 3rem; color: #aaa; }
+    .export-btn { padding: 0.5rem 1rem; border: 2px solid #b5608a; border-radius: 8px; background: #b5608a; color: #fff; cursor: pointer; font-size: 0.85rem; }
+    .export-btn:hover { background: #a04f7a; }
+  </style>
+</head>
+<body>
+  <h1>RSVP Responses</h1>
+  <p class="subtitle">Amino & Yasmeen Wedding - Admin Panel</p>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <button class="active" data-filter="all">All</button>
+    <button data-filter="Joyfully Accept">Accepted</button>
+    <button data-filter="Regretfully Decline">Declined</button>
+    <input type="text" id="search" placeholder="Search by name or email..." />
+    <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Guests</th>
+        <th>Dietary</th>
+        <th>Message</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    let allRsvps = [];
+    let currentFilter = "all";
+
+    async function fetchData() {
+      const res = await fetch("/api/rsvps");
+      const data = await res.json();
+      allRsvps = data.rsvps;
+      renderStats(data.stats);
+      renderTable(allRsvps);
+    }
+
+    function renderStats(s) {
+      document.getElementById("stats").innerHTML = `
+        <div class="stat-card"><div class="number">${s.total}</div><div class="label">Total RSVPs</div></div>
+        <div class="stat-card"><div class="number">${s.accepted}</div><div class="label">Accepted</div></div>
+        <div class="stat-card"><div class="number">${s.declined}</div><div class="label">Declined</div></div>
+        <div class="stat-card"><div class="number">${s.total_guests}</div><div class="label">Total Guests</div></div>
+      `;
+    }
+
+    function renderTable(rsvps) {
+      const tbody = document.getElementById("tbody");
+      if (!rsvps.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">No RSVPs yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rsvps.map((r, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.email)}</td>
+          <td><span class="badge ${r.attendance === 'Joyfully Accept' ? 'accept' : 'decline'}">${r.attendance === 'Joyfully Accept' ? 'Accepted' : 'Declined'}</span></td>
+          <td>${r.guests}</td>
+          <td title="${esc(r.dietary)}">${esc(r.dietary) || '—'}</td>
+          <td title="${esc(r.message)}">${esc(r.message) || '—'}</td>
+          <td>${new Date(r.created_at + 'Z').toLocaleDateString()}</td>
+        </tr>
+      `).join("");
+    }
+
+    function esc(str) {
+      const d = document.createElement("div");
+      d.textContent = str || "";
+      return d.innerHTML;
+    }
+
+    function applyFilters() {
+      const search = document.getElementById("search").value.toLowerCase();
+      let filtered = allRsvps;
+      if (currentFilter !== "all") {
+        filtered = filtered.filter(r => r.attendance === currentFilter);
+      }
+      if (search) {
+        filtered = filtered.filter(r =>
+          r.name.toLowerCase().includes(search) || r.email.toLowerCase().includes(search)
+        );
+      }
+      renderTable(filtered);
+    }
+
+    document.querySelectorAll(".filters button[data-filter]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filters button[data-filter]").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    document.getElementById("search").addEventListener("input", applyFilters);
+
+    function exportCSV() {
+      const headers = ["Name", "Email", "Attendance", "Guests", "Dietary", "Message", "Date"];
+      const rows = allRsvps.map(r => [
+        r.name, r.email, r.attendance, r.guests, r.dietary, r.message, r.created_at
+      ]);
+      const csv = [headers, ...rows].map(row => row.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "rsvp-responses.csv";
+      a.click();
+    }
+
+    fetchData();
+  </script>
+</body>
+</html>
