@@ -46,16 +46,17 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  let body;
+  // Support both JSON body (from admin delete) and form fields (from RSVP form)
+  var body;
   try {
     body = JSON.parse(e.postData.contents);
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ error: "Invalid JSON" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    // Fall back to standard form parameters (e.parameter)
+    body = e.parameter || {};
   }
 
-  let result;
-  const action = body.action || "rsvp";
+  var result;
+  var action = body.action || "rsvp";
 
   if (action === "delete") {
     result = deleteRsvp(body.id);
