@@ -27,11 +27,28 @@
     .empty { text-align: center; padding: 3rem; color: #aaa; }
     .export-btn { padding: 0.5rem 1rem; border: 2px solid #b5608a; border-radius: 8px; background: #b5608a; color: #fff; cursor: pointer; font-size: 0.85rem; }
     .export-btn:hover { background: #a04f7a; }
+    .delete-btn { background: none; border: none; color: #a04040; cursor: pointer; font-size: 0.85rem; padding: 0.3rem 0.6rem; border-radius: 6px; transition: all 0.2s; }
+    .delete-btn:hover { background: #fde8e8; }
+    .nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .nav-link { color: #b5608a; text-decoration: none; font-size: 0.9rem; border: 2px dashed #e8a8d1; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+    .nav-link:hover { background: #f5d9e8; }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .confirm-box { background: #fff; border-radius: 12px; padding: 2rem; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .confirm-box p { margin-bottom: 1.5rem; color: #333; }
+    .confirm-box .btn-group { display: flex; gap: 0.75rem; justify-content: center; }
+    .confirm-box button { padding: 0.5rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
+    .confirm-box .btn-cancel { background: #eee; color: #555; }
+    .confirm-box .btn-danger { background: #a04040; color: #fff; }
   </style>
 </head>
 <body>
-  <h1>RSVP Responses</h1>
-  <p class="subtitle">Amino & Yasmeen Wedding - Admin Panel</p>
+  <div class="nav-bar">
+    <div>
+      <h1>RSVP Responses</h1>
+      <p class="subtitle">Amino & Yasmeen Wedding - Admin Panel</p>
+    </div>
+    <a href="/guestbook" class="nav-link">View Guestbook</a>
+  </div>
 
   <div class="stats" id="stats"></div>
 
@@ -54,6 +71,7 @@
         <th>Dietary</th>
         <th>Message</th>
         <th>Date</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -83,7 +101,7 @@
     function renderTable(rsvps) {
       const tbody = document.getElementById("tbody");
       if (!rsvps.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty">No RSVPs yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty">No RSVPs yet</td></tr>';
         return;
       }
       tbody.innerHTML = rsvps.map((r, i) => `
@@ -96,6 +114,7 @@
           <td title="${esc(r.dietary)}">${esc(r.dietary) || '—'}</td>
           <td title="${esc(r.message)}">${esc(r.message) || '—'}</td>
           <td>${new Date(r.created_at + 'Z').toLocaleDateString()}</td>
+          <td><button class="delete-btn" onclick="confirmDelete(${r.id}, '${esc(r.name).replace(/'/g, "\\'")}')">Delete</button></td>
         </tr>
       `).join("");
     }
@@ -142,6 +161,40 @@
       a.href = URL.createObjectURL(blob);
       a.download = "rsvp-responses.csv";
       a.click();
+    }
+
+    function confirmDelete(id, name) {
+      const overlay = document.createElement("div");
+      overlay.className = "confirm-overlay";
+      overlay.innerHTML = `
+        <div class="confirm-box">
+          <p>Are you sure you want to delete the RSVP from <strong>${name}</strong>?</p>
+          <div class="btn-group">
+            <button class="btn-cancel" onclick="this.closest('.confirm-overlay').remove()">Cancel</button>
+            <button class="btn-danger" id="confirm-yes">Delete</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+      document.getElementById("confirm-yes").addEventListener("click", async () => {
+        overlay.remove();
+        await deleteRsvp(id);
+      });
+    }
+
+    async function deleteRsvp(id) {
+      try {
+        const res = await fetch(`/api/rsvp/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          await fetchData();
+        } else {
+          const data = await res.json();
+          alert(data.error || "Failed to delete RSVP.");
+        }
+      } catch (err) {
+        alert("Network error. Could not delete RSVP.");
+      }
     }
 
     fetchData();

@@ -66,9 +66,46 @@ app.get("/api/rsvps", (req, res) => {
   }
 });
 
+// Delete RSVP
+app.delete("/api/rsvp/:id", (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = db.prepare("DELETE FROM rsvps WHERE id = ?").run(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "RSVP not found." });
+    }
+
+    res.json({ message: "RSVP deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting RSVP:", err);
+    res.status(500).json({ error: "Failed to delete RSVP." });
+  }
+});
+
+// Get comments for guestbook (public)
+app.get("/api/comments", (req, res) => {
+  try {
+    const comments = db.prepare(
+      "SELECT name, message, created_at FROM rsvps WHERE message != '' AND message IS NOT NULL ORDER BY created_at DESC"
+    ).all();
+
+    res.json({ comments });
+  } catch (err) {
+    console.error("Error fetching comments:", err);
+    res.status(500).json({ error: "Failed to fetch comments." });
+  }
+});
+
 // Serve admin page
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
+});
+
+// Serve guestbook page
+app.get("/guestbook", (req, res) => {
+  res.sendFile(path.join(__dirname, "guestbook.html"));
 });
 
 app.listen(PORT, () => {
