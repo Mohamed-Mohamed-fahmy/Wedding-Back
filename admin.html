@@ -39,6 +39,8 @@
     .confirm-box button { padding: 0.5rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; }
     .confirm-box .btn-cancel { background: #eee; color: #555; }
     .confirm-box .btn-danger { background: #a04040; color: #fff; }
+    .setup-banner { background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; font-size: 0.9rem; color: #856404; }
+    .setup-banner code { background: #ffeeba; padding: 0.1rem 0.4rem; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -47,9 +49,10 @@
       <h1>RSVP Responses</h1>
       <p class="subtitle">Amino & Yasmeen Wedding - Admin Panel</p>
     </div>
-    <a href="/guestbook" class="nav-link">View Guestbook</a>
+    <a href="guestbook.html" class="nav-link">View Guestbook</a>
   </div>
 
+  <div id="setup-banner"></div>
   <div class="stats" id="stats"></div>
 
   <div class="filters">
@@ -78,11 +81,33 @@
   </table>
 
   <script>
+    // =====================================================
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
+    // =====================================================
+    const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE";
+    // =====================================================
+
     let allRsvps = [];
     let currentFilter = "all";
 
+    function checkSetup() {
+      if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+        document.getElementById("setup-banner").innerHTML = `
+          <div class="setup-banner">
+            <strong>Setup required:</strong> Open <code>admin.html</code> and replace
+            <code>YOUR_GOOGLE_SCRIPT_URL_HERE</code> with your Google Apps Script Web App URL.
+            See <code>google-apps-script.js</code> for instructions.
+          </div>
+        `;
+        return false;
+      }
+      return true;
+    }
+
     async function fetchData() {
-      const res = await fetch("/api/rsvps");
+      if (!checkSetup()) return;
+
+      const res = await fetch(GOOGLE_SCRIPT_URL + "?action=rsvps");
       const data = await res.json();
       allRsvps = data.rsvps;
       renderStats(data.stats);
@@ -113,7 +138,7 @@
           <td>${r.guests}</td>
           <td title="${esc(r.dietary)}">${esc(r.dietary) || '—'}</td>
           <td title="${esc(r.message)}">${esc(r.message) || '—'}</td>
-          <td>${new Date(r.created_at + 'Z').toLocaleDateString()}</td>
+          <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td><button class="delete-btn" onclick="confirmDelete(${r.id}, '${esc(r.name).replace(/'/g, "\\'")}')">Delete</button></td>
         </tr>
       `).join("");
@@ -185,12 +210,16 @@
 
     async function deleteRsvp(id) {
       try {
-        const res = await fetch(`/api/rsvp/${id}`, { method: "DELETE" });
-        if (res.ok) {
-          await fetchData();
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "delete", id: id })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
         } else {
-          const data = await res.json();
-          alert(data.error || "Failed to delete RSVP.");
+          await fetchData();
         }
       } catch (err) {
         alert("Network error. Could not delete RSVP.");
