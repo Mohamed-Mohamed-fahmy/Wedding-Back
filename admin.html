@@ -115,43 +115,26 @@
       renderTable(allRsvps);
     }
 
-    function fetchViaJsonp() {
-      var callbackName = "_rsvpCb_" + Date.now();
-      var loaded = false;
-      window[callbackName] = function(data) {
-        loaded = true;
-        delete window[callbackName];
-        handleData(data);
-      };
-      var script = document.createElement("script");
-      script.src = GOOGLE_SCRIPT_URL + "?action=rsvps&callback=" + callbackName;
-      script.onerror = function() {
-        loaded = true;
-        delete window[callbackName];
-        document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="9" class="empty">Could not load RSVPs. Check your Apps Script URL and deployment.</td></tr>';
-      };
-      document.head.appendChild(script);
-      setTimeout(function() {
-        if (!loaded) {
-          delete window[callbackName];
-          document.getElementById("tbody").innerHTML =
-            '<tr><td colspan="9" class="empty">Timeout loading RSVPs via JSONP fallback.</td></tr>';
-        }
-      }, 15000);
-    }
-
     function fetchData() {
       if (!checkSetup()) return;
 
-      // Try fetch first (works on most browsers including modern Safari)
-      // Fall back to JSONP if fetch fails (e.g. older Safari CORS issues)
+      document.getElementById("tbody").innerHTML =
+        '<tr><td colspan="9" class="empty">Loading...</td></tr>';
+
       fetch(GOOGLE_SCRIPT_URL + "?action=rsvps")
-        .then(function(res) { return res.json(); })
-        .then(function(data) { handleData(data); })
+        .then(function(res) {
+          console.log("RSVP response:", res.status, res.type, res.url);
+          return res.text();
+        })
+        .then(function(text) {
+          console.log("RSVP raw response:", text.substring(0, 300));
+          var data = JSON.parse(text);
+          handleData(data);
+        })
         .catch(function(err) {
-          console.warn("fetch failed, trying JSONP fallback:", err);
-          fetchViaJsonp();
+          console.error("RSVP fetch error:", err);
+          document.getElementById("tbody").innerHTML =
+            '<tr><td colspan="9" class="empty">Error: ' + esc(err.message) + '<br>Open browser console (F12) for details.</td></tr>';
         });
     }
 

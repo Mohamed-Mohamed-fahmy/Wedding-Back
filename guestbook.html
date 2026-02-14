@@ -248,33 +248,19 @@
         return;
       }
 
-      // Try fetch first, fall back to JSONP if fetch fails (older Safari)
       fetch(GOOGLE_SCRIPT_URL + "?action=comments")
-        .then(function(res) { return res.json(); })
-        .then(function(data) { renderComments(data.comments); })
+        .then(function(res) {
+          console.log("Comments response:", res.status, res.type, res.url);
+          return res.text();
+        })
+        .then(function(text) {
+          console.log("Comments raw response:", text.substring(0, 300));
+          var data = JSON.parse(text);
+          renderComments(data.comments);
+        })
         .catch(function(err) {
-          console.warn("fetch failed, trying JSONP fallback:", err);
-          var callbackName = "_commentsCb_" + Date.now();
-          var loaded = false;
-          window[callbackName] = function(data) {
-            loaded = true;
-            delete window[callbackName];
-            renderComments(data.comments);
-          };
-          var script = document.createElement("script");
-          script.src = GOOGLE_SCRIPT_URL + "?action=comments&callback=" + callbackName;
-          script.onerror = function() {
-            loaded = true;
-            delete window[callbackName];
-            container.innerHTML = '<div class="empty-book"><p>Could not load messages. Please try again later.</p></div>';
-          };
-          document.head.appendChild(script);
-          setTimeout(function() {
-            if (!loaded) {
-              delete window[callbackName];
-              container.innerHTML = '<div class="empty-book"><p>Timeout loading messages.</p></div>';
-            }
-          }, 15000);
+          console.error("Comments fetch error:", err);
+          container.innerHTML = '<div class="empty-book"><p>Error loading messages: ' + esc(err.message) + '</p></div>';
         });
     }
 
