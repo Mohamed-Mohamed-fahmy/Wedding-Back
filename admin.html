@@ -82,11 +82,7 @@
   </table>
 
   <script>
-    // =====================================================
-    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
-    // =====================================================
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP7Hlu7sQ5WPSYnYfpYY6488G5VBsdO5v7_U5dtJWrc-e03jQbgAIPjweTZ8D_gfPyJA/exec";
-    // =====================================================
+    const API_URL = "https://wedding.mohamed-mohamed-fahmy.workers.dev";
 
     let allRsvps = [];
     let currentFilter = "all";
@@ -97,19 +93,7 @@
       el.scrollTop = el.scrollHeight;
     }
 
-    function checkSetup() {
-      if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-        document.getElementById("setup-banner").innerHTML = `
-          <div class="setup-banner">
-            <strong>Setup required:</strong> Open <code>admin.html</code> and replace
-            <code>YOUR_GOOGLE_SCRIPT_URL_HERE</code> with your Google Apps Script Web App URL.
-            See <code>google-apps-script.js</code> for instructions.
-          </div>
-        `;
-        return false;
-      }
-      return true;
-    }
+    function checkSetup() { return true; }
 
     function handleData(data) {
       if (data.error) {
@@ -128,7 +112,7 @@
       document.getElementById("tbody").innerHTML =
         '<tr><td colspan="9" class="empty">Loading...</td></tr>';
 
-      var url = GOOGLE_SCRIPT_URL + "?action=rsvps";
+      var url = API_URL + "?action=rsvps";
       dbg("Fetching: " + url);
 
       fetch(url)
@@ -256,7 +240,7 @@
       applyFilters();
 
       // Fire-and-forget delete via image beacon GET — works on all browsers
-      new Image().src = GOOGLE_SCRIPT_URL + "?action=delete&id=" + encodeURIComponent(id);
+      new Image().src = API_URL + "?action=delete&id=" + encodeURIComponent(id);
     }
 
     fetchData();

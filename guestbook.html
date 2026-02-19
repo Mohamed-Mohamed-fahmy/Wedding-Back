@@ -204,11 +204,7 @@
   </main>
 
   <script>
-    // =====================================================
-    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
-    // =====================================================
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP7Hlu7sQ5WPSYnYfpYY6488G5VBsdO5v7_U5dtJWrc-e03jQbgAIPjweTZ8D_gfPyJA/exec";
-    // =====================================================
+    const API_URL = "https://wedding.mohamed-mohamed-fahmy.workers.dev";
 
     function esc(str) {
       const d = document.createElement("div");
@@ -243,12 +239,7 @@
     function loadComments() {
       var container = document.getElementById("comments-container");
 
-      if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-        container.innerHTML = '<div class="empty-book"><p>Setup required: Add your Google Apps Script URL to guestbook.html</p></div>';
-        return;
-      }
-
-      fetch(GOOGLE_SCRIPT_URL + "?action=comments")
+      fetch(API_URL + "?action=comments")
         .then(function(res) {
           console.log("Comments response:", res.status, res.type, res.url);
           return res.text();
